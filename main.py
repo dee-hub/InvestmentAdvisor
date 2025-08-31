@@ -146,6 +146,16 @@ with st.expander("📈 Performance", expanded=True):
     comp_fig, comp_note = plot_total_return_vs_benchmark(conn, default_symbol, benchmark="SPY")
     st.plotly_chart(comp_fig, use_container_width=True)
     st.markdown(comp_note)
+    st.markdown("---")
+    best_worst_month = get_best_worst_month_and_hit_rate(conn, default_symbol)
+    st.caption(
+    f"""
+    From **2010-01-31** to **2025-07-31**, **{default_symbol.upper()}** had positive monthly returns in **{best_worst_month['hit_rate']}%** of months. The best-performing month was **{best_worst_month['best_month']}**, returning **{best_worst_month['best_month_return']}%**, while the worst was **{best_worst_month['worst_month']}**, with a return of **{best_worst_month['worst_month_return']}%**.  
+    \n On a yearly basis, the best year was **{best_worst_month['best_year']}** with a gain of **{best_worst_month['best_year_return']}%**, and the worst year was **{best_worst_month['worst_year']}**, posting a loss of **{best_worst_month['worst_year_return']}%**.
+    """
+)
+    
+
 
 with st.expander("⚠️ Risk Metrics", expanded=False):
     st.subheader("📉 Max Drawdown & Duration")
