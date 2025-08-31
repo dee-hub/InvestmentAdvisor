@@ -109,6 +109,3 @@ This framework breaks the analysis into tiers based on what can be computed from
 * **Volume regime flag**: Filters for low-liquidity periods.
 
 ## Tier 2 — Fundamentals (Coming soon)
-=======
->>>>>>> 8abe3d9135bca4225afd2c920a49d4caf8e3d5de
->>>>>>> 456c633e2cc055e7bd6e9d6fe8bbe9c87cf7632c
