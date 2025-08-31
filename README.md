@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Investment Analysis Framework
 
 For long-horizon investment research (not trading), you want a small, clear, evidence-based set of metrics that answer key questions:
