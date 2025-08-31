@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Investment Analysis Framework
 
 For long-horizon investment research (not trading), you want a small, clear, evidence-based set of metrics that answer key questions:
@@ -51,3 +52,7 @@ This framework breaks the analysis into tiers based on what can be computed from
 * **Volume regime flag**: Filters for low-liquidity periods.
 
 ## Tier 2 — Fundamentals (Coming soon)
+=======
+# InvestmentAdvisor
+A dashboard for helping people research stock options of their choice for long term investments
+>>>>>>> 8abe3d9135bca4225afd2c920a49d4caf8e3d5de
