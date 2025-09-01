@@ -11,7 +11,7 @@ import pandas as pd
 import duckdb
 from datetime import datetime
 import plotly.graph_objects as go
-from typing import Dict, Tuple, Dict
+from typing import Dict, Tuple, Dict, List
 from math import sqrt
 #--------------------------------------------------------------------------------------#
 #----------------------------Performance Indicators-----------------------------------#
@@ -274,7 +274,7 @@ def get_best_worst_month_and_hit_rate(con: any, symbol: str) -> Dict:
 
 def calculate_annual_volatility_by_year(con: any, symbol: str) -> List[Dict]:
     """
-    Calculates annualized volatility (monthly return std × sqrt(12)) for each year
+    Calculates annualized volatility (monthly return std x sqrt(12)) for each year
     and returns a list of dictionaries with start date, end date, and volatility.
 
     Parameters:
@@ -686,3 +686,252 @@ def plot_return_distribution(
     )
 
     return fig, note
+
+#--------------------------------------------------------------------------------------#
+#----------------------------------Trend & Momentum-----------------------------------#
+#-------------------------------------------------------------------------------------#
+
+# ---------- 12-1 Momentum ----------
+
+def compute_momentum_12_1_with_fig(con, symbol: str, start_date: str = "2010-01-01") -> dict:
+    """
+    12-1 momentum = 12-month return skipping the most recent month.
+    - Series: momentum_t = (Price_{t-1} / Price_{t-13}) - 1
+    - Chart: monthly 12-1 momentum (%) over time, zero reference line.
+
+    Returns dict with latest momentum and a Plotly figure under key 'fig'.
+    """
+    df = con.execute(f"""
+        SELECT ts, close
+        FROM ohlcv
+        WHERE symbol = '{symbol.upper()}'
+          AND ts >= '{start_date}'
+        ORDER BY ts
+    """).fetchdf()
+    if df.empty:
+        return {"error": "No data", "fig": None}
+
+    df["ts"] = pd.to_datetime(df["ts"])
+    df = df.set_index("ts").sort_index()
+    monthly = df["close"].resample("M").last().dropna()
+
+    # Drop current (possibly incomplete) month if present
+    today = pd.Timestamp.today()
+    if len(monthly) and monthly.index[-1].to_period("M") == today.to_period("M"):
+        monthly = monthly.iloc[:-1]
+
+    if len(monthly) < 14:
+        return {"error": "Need ≥ 14 monthly observations", "fig": None}
+
+    # 12-1 momentum series
+    # Equivalent to monthly.pct_change(12).shift(1)
+    mom_series = (monthly.shift(1) / monthly.shift(13) - 1).dropna()
+
+    latest_val = float(mom_series.iloc[-1])
+    start_m = mom_series.index[0].strftime("%Y-%m")
+    end_m = mom_series.index[-1].strftime("%Y-%m")
+
+    # Figure
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=mom_series.index,
+        y=mom_series.values * 100,
+        mode="lines",
+        name="12-1 Momentum (%)",
+        line=dict(width=2),
+    ))
+    fig.add_hline(y=0, line_dash="dash", annotation_text="0%")
+
+    fig.update_layout(
+        title=f"{symbol.upper()} — 12-1 Momentum (Monthly)",
+        xaxis_title="Month",
+        yaxis_title="Return (%)",
+        template="plotly_white",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(l=0, r=0, t=40, b=40),
+    )
+
+    return {
+        "symbol": symbol.upper(),
+        "start_month": start_m,
+        "end_month": end_m,
+        "momentum_12_1_pct": round(latest_val * 100, 2),
+        "fig": fig,
+    }
+
+
+# ---------- SMA Trend & Last Cross ----------
+
+def compute_sma_trend_and_cross_with_fig(
+    con,
+    symbol: str,
+    sma_short: int = 50,
+    sma_long: int = 200,
+    start_date: str = "2010-01-01",
+) -> dict:
+    """
+    Computes trend stats and returns a price+SMA chart.
+      - % of trading days close > long SMA
+      - Last golden/death cross between short & long SMA
+      - Figure: Close with SMA_short & SMA_long, last cross marked.
+
+    Returns dict with stats and Plotly figure under key 'fig'.
+    """
+    df = con.execute(f"""
+        SELECT ts, close
+        FROM ohlcv
+        WHERE symbol = '{symbol.upper()}'
+          AND ts >= '{start_date}'
+        ORDER BY ts
+    """).fetchdf()
+    if df.empty:
+        return {"error": "No data", "fig": None}
+
+    df["ts"] = pd.to_datetime(df["ts"])
+    df = df.set_index("ts").sort_index()
+    s = df["close"].astype(float)
+
+    sma_s = s.rolling(window=sma_short, min_periods=sma_short).mean()
+    sma_l = s.rolling(window=sma_long, min_periods=sma_long).mean()
+
+    valid = ~sma_l.isna()
+    if valid.sum() == 0:
+        return {"error": f"Need ≥ {sma_long} trading days for long SMA", "fig": None}
+
+    pct_above_long = float((s[valid] > sma_l[valid]).mean() * 100.0)
+
+    # Cross detection
+    short_above = (sma_s > sma_l) & valid
+    sign = short_above.astype(float)
+    crossed = sign.ne(sign.shift(1)) & valid
+    crossed.iloc[0] = False
+
+    last_cross_date = crossed[crossed].index.max() if crossed.any() else None
+    cross_type = None
+    days_since = None
+    if last_cross_date is not None:
+        post_state = bool(short_above.loc[last_cross_date])
+        cross_type = "golden_cross" if post_state else "death_cross"
+        days_since = (s.index[-1] - last_cross_date).days
+
+    current_state = "above_long" if bool(short_above.iloc[-1]) else "below_long"
+
+    # Figure
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=s.index, y=s.values, mode="lines", name="Close", line=dict(width=1.6)))
+    fig.add_trace(go.Scatter(x=sma_s.index, y=sma_s.values, mode="lines", name=f"SMA{sma_short}", line=dict(width=1)))
+    fig.add_trace(go.Scatter(x=sma_l.index, y=sma_l.values, mode="lines", name=f"SMA{sma_long}", line=dict(width=1)))
+
+    if last_cross_date is not None:
+        fig.add_vline(
+            x=last_cross_date, line_dash="dot",
+            annotation_text=f"Last {('Golden' if cross_type=='golden_cross' else 'Death')} Cross",
+            annotation_position="top right"
+        )
+
+    fig.update_layout(
+        title=f"{symbol.upper()} — Trend (SMA {sma_short}/{sma_long})",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        template="plotly_white",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(l=0, r=0, t=40, b=40),
+    )
+
+    return {
+        "symbol": symbol.upper(),
+        "sma_short": sma_short,
+        "sma_long": sma_long,
+        "pct_time_above_long_sma": round(pct_above_long, 2),
+        "last_cross_type": cross_type, # "golden_cross" | "death_cross" | None
+        "last_cross_date": None if last_cross_date is None else str(last_cross_date.date()),
+        "days_since_last_cross": days_since,
+        "current_trend_vs_long": current_state, # "above_long" | "below_long"
+        "fig": fig,
+    }
+
+
+# ---------- ATH & 52-Week Range ----------
+
+def compute_ath_and_52w_with_fig(
+    con,
+    symbol: str,
+    lookback_days: int = 252,
+    start_date: str = "2010-01-01",
+    window_days_show: int = 756,  # ~3 years for chart readability
+) -> dict:
+    """
+    Computes:
+      - Distance from all-time high (ATH)
+      - 52-week (≈lookback_days) high/low & distances
+    Chart: recent window (default ~3y) with horizontal lines for ATH and 52w levels.
+
+    Returns dict with metrics and Plotly figure under key 'fig'.
+    """
+    df = con.execute(f"""
+        SELECT ts, close
+        FROM ohlcv
+        WHERE symbol = '{symbol.upper()}'
+          AND ts >= '{start_date}'
+        ORDER BY ts
+    """).fetchdf()
+    if df.empty:
+        return {"error": "No data", "fig": None}
+
+    df["ts"] = pd.to_datetime(df["ts"])
+    df = df.set_index("ts").sort_index()
+    s = df["close"].astype(float).dropna()
+    if s.empty:
+        return {"error": "No close prices", "fig": None}
+
+    current_price = float(s.iloc[-1])
+    ath_price = float(s.max())
+    ath_date = s.idxmax()
+
+    from_ath_pct = (current_price / ath_price) - 1.0
+
+    # 52-week stats (by trading days)
+    n = min(lookback_days, len(s))
+    s_win = s.iloc[-n:]
+    high_52w = float(s_win.max())
+    low_52w = float(s_win.min())
+    from_52w_high_pct = (current_price / high_52w) - 1.0
+    from_52w_low_pct = (current_price / low_52w) - 1.0
+
+    # Chart window
+    w = min(window_days_show, len(s))
+    s_plot = s.iloc[-w:]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=s_plot.index, y=s_plot.values, mode="lines", name="Close", line=dict(width=1.6)))
+
+    # Horizontal levels
+    fig.add_hline(y=ath_price, line_dash="dot", annotation_text=f"ATH ({ath_price:,.2f})")
+    fig.add_hline(y=high_52w, line_dash="dash", annotation_text=f"52W High ({high_52w:,.2f})")
+    fig.add_hline(y=low_52w, line_dash="dash", annotation_text=f"52W Low ({low_52w:,.2f})")
+
+    fig.update_layout(
+        title=f"{symbol.upper()} — Distance to ATH & 52-Week Range",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        template="plotly_white",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(l=0, r=0, t=40, b=40),
+    )
+
+    return {
+        "symbol": symbol.upper(),
+        "current_close": round(current_price, 4),
+        "ath_price": round(ath_price, 4),
+        "ath_date": str(ath_date.date()),
+        "from_ath_pct": round(from_ath_pct * 100.0, 2),            # negative => below ATH
+        "high_52w": round(high_52w, 4),
+        "low_52w": round(low_52w, 4),
+        "from_52w_high_pct": round(from_52w_high_pct * 100.0, 2),  # negative => below 52w high
+        "from_52w_low_pct": round(from_52w_low_pct * 100.0, 2),    # positive => above 52w low
+        "lookback_days_used": n,
+        "fig": fig,
+    }

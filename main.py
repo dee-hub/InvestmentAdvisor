@@ -114,15 +114,20 @@ with m2:
     fig, summary, kpi_sum = plot_max_drawdown(con=conn, symbol=default_symbol)
     st.metric(label="Max Drawdown", help=summary, value=f"{kpi_sum[0]:.2%}", width="stretch", border=True, height=200, chart_data=kpi_sum[1]["drawdown_pct"], chart_type="area")
 with m3:
-    metrics, note = compute_sharpe_sortino_calmar(con=conn, symbol=default_symbol)
-    st.metric(label="Volatility (ann.)", value=metrics["vol_ann_pct"], delta=f"from monthly returns", help=note, width="stretch", border=True, height=200)
+    vol_lists = calculate_annual_volatility_by_year(con=conn, symbol=default_symbol)
+    note= "Annualized volatility is a measure of how much an asset’s price fluctuates in a given year. It captures the standard deviation of returns, scaled to reflect a full year's worth of movement"
+    chg_in_ann_vol = f"{(cagr_vals[-1] - cagr_vals[-2]) / cagr_vals[-1]:.2f}% from {end_date}"
+    ann_vols_dt = [ann_vols.get("annualized_volatility_pct") for ann_vols in vol_lists]
+    st.metric(label="Volatility (ann.)", value=vol_lists[-1].get("annualized_volatility_pct"), 
+              delta=f"{(ann_vols_dt[-1] - ann_vols_dt[-2]) / ann_vols_dt[-1]:.2f}% from {end_date}", help=note, width="stretch", border=True, height=200, 
+              chart_data=ann_vols_dt, chart_type="area")
 with m4:
     metrics, note = compute_sharpe_sortino_calmar(con=conn, symbol=default_symbol)
     sharpe = metrics["sharpe"]                  
     sortino = metrics["sortino"]                
     calmar = metrics["calmar"]                  
     delta_text = f"Sortino {sortino:.2f} · Calmar {calmar:.2f}"
-    st.metric(label=f"Sharpe (rf={2}%)", value=f"{sharpe:.2f}", delta=delta_text, help=note, width="stretch", border=True, height=200)
+    st.metric(label=f"Sharpe (rf={2}%)", value=f"{sharpe:.2f}", delta=delta_text, delta_color="off", help=note, width="stretch", border=True, height=200)
 
 
 # === PERFORMANCE SECTION ===
