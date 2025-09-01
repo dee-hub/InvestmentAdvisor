@@ -23,51 +23,156 @@ from helpers.functionalities import *
 # Page setup
 # ----------------------------
 st.set_page_config(
-    page_title="CryptoAdvisor (alpha)",
+    page_title="Quantvisor (alpha)",
     page_icon="🪙",
     layout="wide",
 )
+# ---------- Sidebar CSS ----------
+SIDEBAR_CSS = """
+<style>
+/* Sidebar container */
+[data-testid="stSidebar"] > div:first-child {
+  padding: 1rem 1rem 2rem 1rem;
+  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%); /* slate-900 -> near black */
+  color: #e2e8f0; /* slate-200 text */
+}
 
-@st.cache_data(show_spinner=False, ttl=10 * 60)
-def fetch_news(symbol: str) -> list[dict]:
-    """Fetch latest news via yfinance's Yahoo Finance API. Falls back to empty list."""
-    try:
-        t = yf.Ticker(symbol)
-        news = t.news or []  # list of dicts with keys: title, link, publisher, providerPublishTime, etc.
-        # sort newest first just in case
-        news = sorted(news, key=lambda x: x.get('providerPublishTime', 0), reverse=True)
-        return news
-    except Exception:
-        return []
+/* Brand card */
+.qv-brand {
+  background: radial-gradient(120% 120% at 0% 0%, #1e293b 0%, #0f172a 60%);
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  margin-bottom: 14px;
+}
+.qv-brand .title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  font-size: 1.1rem;
+  color: #f8fafc; /* slate-50 */
+}
+.qv-brand .badge {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #cbd5e1; /* slate-300 */
+  background: rgba(148,163,184,0.15);
+  border: 1px solid rgba(148,163,184,0.25);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
 
+/* Pill nav (deadlinks for the two disabled) */
+.qv-pills {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 2px 0;
+  flex-wrap: wrap;
+}
+.qv-pill {
+  user-select: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.35);
+  color: #e2e8f0;
+  background: rgba(30,41,59,0.55);
+  font-size: 13px;
+  line-height: 1;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.qv-pill.active {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%); /* blue */
+  border-color: transparent;
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+}
+.qv-pill.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none; /* deadlink */
+}
 
-# ----------------------------
-# Sidebar
-# ----------------------------
+/* Divider & small caption */
+.qv-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(148,163,184,0.35), transparent);
+  margin: 14px 0;
+}
+.qv-caption {
+  font-size: 12px;
+  color: #94a3b8; /* slate-400 */
+  margin-top: 2px;
+}
+
+/* Tighten Streamlit default spacing a bit */
+.sidebar-el {
+  margin-bottom: 10px;
+}
+
+/* Make selectboxes pop against dark bg */
+section[data-testid="stSidebar"] label p {
+  color: #e2e8f0 !important;
+}
+</style>
+"""
+
+popular_crypto = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "AVAX", "TON", "DOT"]
+popular_stocks = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AMD", "NFLX", "BRK-B"]
+
 with st.sidebar:
-    st.markdown("## 🪙 CryptoAdvisor")
-    st.caption("alpha • research-only")
+    st.markdown(SIDEBAR_CSS, unsafe_allow_html=True)
 
-    section = st.radio("Section", ["Research", "Backtrack", "Test strategy"], index=0, help="Only Research is available right now.")
+    # Brand card
+    st.markdown(
+        """
+        <div class="qv-brand">
+          <div class="title">🪙 Quantvisor</div>
+          <div class="badge">alpha • research-only</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("---")
-    asset_type = st.selectbox("Asset type", ["Crypto", "Stock"], index=1)
+    # Pill nav (only Research is active; others are deadlinks)
+    st.markdown(
+        """
+        <div class="qv-pills">
+          <span class="qv-pill active">Research</span>
+          <span class="qv-pill disabled" title="Coming soon">Backtrack</span>
+          <span class="qv-pill disabled" title="Coming soon">Test strategy</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    # Keep your Python "section" state consistent:
+    section = "Research"
 
-    popular_crypto = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "AVAX", "TON", "DOT"]
-    popular_stocks = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AMD", "NFLX", "BRK-B"]
+    st.markdown('<div class="qv-divider"></div>', unsafe_allow_html=True)
+
+    # Controls
+    asset_type = st.selectbox("Asset type", ["Stock", "Crypto"], index=0, key="asset_type")
 
     if asset_type == "Crypto":
-        st.markdown("Crpto asset research is underdevelopment")
+        st.info("Crypto asset research is under development.")
         st.stop()
-        #base_choice = st.selectbox("Popular cryptos", popular_crypto, index=0)
-        #default_symbol = f"{base_choice}-USD"
-        #sym_help = "Enter a custom crypto pair as a Yahoo Finance symbol, e.g., BTC-USD, ETH-USD."
     else:
-        default_symbol = st.selectbox("Popular stocks", popular_stocks)
-        sym_help = "Enter any stock ticker, e.g., AAPL, MSFT. Use Yahoo Finance symbol format."
+        default_symbol = st.selectbox(
+            "Popular stocks",
+            popular_stocks,
+            index=0,
+            key="popular_stocks_select",
+            help="Enter any stock ticker, e.g., AAPL, MSFT."
+        )
 
-    st.markdown("---")
-    st.caption("Not financial advice. Data may be delayed.")
+    st.markdown('<div class="qv-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="qv-caption">Not financial advice. Data may be delayed.</div>', unsafe_allow_html=True)
 
 # ----------------------------
 # Main content routing
