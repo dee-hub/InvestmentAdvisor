@@ -1,1 +1,2 @@
-*.duckdb
+*.ingest_marketdata.py
+*.ipynb
