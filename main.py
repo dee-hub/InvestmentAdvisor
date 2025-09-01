@@ -122,16 +122,15 @@ with m3:
               delta=f"{(ann_vols_dt[-1] - ann_vols_dt[-2]) / ann_vols_dt[-1]:.2f}% from {end_date}", help=note, width="stretch", border=True, height=200, 
               chart_data=ann_vols_dt, chart_type="area")
 with m4:
-    metrics, note = compute_sharpe_sortino_calmar(con=conn, symbol=default_symbol)
-    sharpe = metrics["sharpe"]                  
-    sortino = metrics["sortino"]                
-    calmar = metrics["calmar"]                  
-    delta_text = f"Sortino {sortino:.2f} · Calmar {calmar:.2f}"
-    st.metric(label=f"Sharpe (rf={2}%)", value=f"{sharpe:.2f}", delta=delta_text, delta_color="off", help=note, width="stretch", border=True, height=200)
+    mom_dict = compute_momentum_12_1_with_fig(conn, default_symbol)                 
+    note = "12-1 momentum is a measure used in finance to assess an asset's performance over a 12-month period, excluding the most recent month"
+    mom_vals = mom_dict.get("mom_12_1").values * 100
+    st.metric(label=f"12-1 Momentum", value=mom_dict.get("momentum_12_1_pct"), chart_data=mom_vals, 
+              help=note, width="stretch", border=True, height=200, chart_type="area")
 
 
 # === PERFORMANCE SECTION ===
-with st.expander("📈 Performance", expanded=True):
+with st.expander("Performance", expanded=False):
     st.subheader("📊 Rolling Returns (CAGR)")
     st.markdown("""
     Rolling returns show how the asset performed over overlapping **3-year periods**.
@@ -159,15 +158,18 @@ with st.expander("📈 Performance", expanded=True):
     \n On a yearly basis, the best year was **{best_worst_month['best_year']}** with a gain of **{best_worst_month['best_year_return']}%**, and the worst year was **{best_worst_month['worst_year']}**, posting a loss of **{best_worst_month['worst_year_return']}%**.
     """
 )
-    
 
-
-with st.expander("⚠️ Risk Metrics", expanded=False):
+with st.expander("Risk Metrics", expanded=False):
     st.subheader("📉 Max Drawdown & Duration")
     st.markdown("""
-    This shows the **largest drop** from a previous high (drawdown) and how long it took to recover.
-    It tells you how painful a worst-case investment period could have been, which is crucial for risk tolerance.
-    """)
+    <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
+        <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+        <p style="margin-bottom: 1rem;">
+            This shows the <b>largest drop</b> from a previous high (drawdown) and how long it took to recover.
+            It tells you how painful a worst-case investment period could have been, which is crucial for risk tolerance.
+        </p>
+        </div>
+    """, unsafe_allow_html=True)
     dd_fig, dd_note, _ = plot_max_drawdown(conn, default_symbol)
     st.plotly_chart(dd_fig, use_container_width=True)
     st.markdown(dd_note)
@@ -176,13 +178,17 @@ with st.expander("⚠️ Risk Metrics", expanded=False):
 
     st.subheader("📏 Risk Ratios: Sharpe, Sortino, Calmar")
     st.markdown("""
-    These ratios tell you how efficiently the asset has delivered returns relative to its risk:
-    - **Sharpe**: return vs. total volatility.
-    - **Sortino**: return vs. downside-only volatility (focuses on losses).
-    - **Calmar**: return vs. worst-case loss (drawdown).
-    
-    Higher is better — values above **1.0** generally signal good risk-adjusted performance.
-    """)
+        <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9; margin-bottom: 15px;">
+            <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+            <p style="margin-bottom: 1rem;">
+                These ratios tell you how efficiently the asset has delivered returns relative to its risk:
+                <li> <b>Sharpe</b>: return vs. total volatility. </li>
+                <li> <b>Sortino</b>: return vs. downside-only volatility (focuses on losses). </li>
+                <li> <b>Calmar</b>: return vs. worst-case loss (drawdown). </li>
+                Higher is better — values above <b>1.0</b> generally signal good risk-adjusted performance.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
     metrics, note = compute_sharpe_sortino_calmar(conn, default_symbol)
     sharpe_val, sharpe_delta = format_metric(metrics["sharpe"], "sharpe")
     sortino_val, sortino_delta = format_metric(metrics["sortino"], "sortino")
@@ -198,12 +204,82 @@ with st.expander("⚠️ Risk Metrics", expanded=False):
 
     st.subheader("📊 Monthly Return Distribution")
     st.markdown("""
-    This chart shows how monthly returns have been distributed over time — are they mostly positive? How extreme are the losses?  
-    Look for **skew** (bias toward gains or losses) and **kurtosis** (how often extreme outcomes happen).
-    """)
+    <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
+        <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+        <p style="margin-bottom: 1rem;">
+            This chart shows how monthly returns have been distributed over time — are they mostly positive? How extreme are the losses?  
+            Look for <b>skew</b> (bias toward gains or losses) and <b>kurtosis</b> (how often extreme outcomes happen).
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     dist_fig, dist_note = plot_return_distribution(conn, default_symbol)
     st.plotly_chart(dist_fig, use_container_width=True)
     st.caption(dist_note)
 
+with st.expander("Trend & Momentum", expanded=False):
+    st.markdown("""
+    <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
+        <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+        <p style="margin-bottom: 1rem;">
+            This momentum indicator calculates the asset's return over the past 12 months, excluding the most recent month. 
+            It helps highlight sustained uptrends or downtrends while reducing noise from short-term fluctuations.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    result = compute_momentum_12_1_with_fig(conn, default_symbol)
+
+    if result.get("fig"):
+        st.plotly_chart(result["fig"], use_container_width=True)
+    else:
+        st.error("Momentum chart could not be generated.")
+    st.markdown("---")
+
+    st.markdown("""
+    <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
+        <h5 style="margin-top: 0;"><b>SMA Trend & Crossover Analysis</b></h5>
+        <p>
+            This analysis compares the asset’s price against two key simple moving averages (SMAs): a short-term (e.g. 50-day) and a long-term (e.g. 200-day). 
+            When the short SMA crosses above the long SMA, it’s called a <b>Golden Cross</b>—often seen as a bullish signal. 
+            A <b>Death Cross</b> (short crosses below long) is typically bearish. 
+            We also measure how often the price stays above the long-term SMA to assess long-term trend strength.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Compute and display chart
+    sma_result = compute_sma_trend_and_cross_with_fig(conn, default_symbol)
+    if sma_result["fig"]:
+        st.plotly_chart(sma_result["fig"], use_container_width=True)
+    else:
+        st.error("SMA trend chart could not be generated.")
+
+    # Dynamic Explanation (after chart)
+    cross_date = sma_result["last_cross_date"]
+    cross_type = sma_result["last_cross_type"]
+    trend_pos = sma_result["current_trend_vs_long"]
+    days_since = sma_result["days_since_last_cross"]
+    pct_above = sma_result["pct_time_above_long_sma"]
+
+    cross_text = {
+        "golden_cross": "a Golden Cross (bullish signal)",
+        "death_cross": "a Death Cross (bearish signal)",
+        None: "no crossover signal recently"
+    }
+
+    current_pos = "above" if trend_pos == "above_long" else "below"
+    
+    st.markdown(f"""
+    <div style="margin-top: 1rem; padding: 1rem; background-color: #eef6f9; border-radius: 10px; margin-bottom: 10px;">
+        <p>
+            The asset has spent <b>{pct_above}%</b> of the time above its long-term SMA, suggesting a relatively{" "}
+            {"strong" if pct_above >= 60 else "mixed" if pct_above >= 40 else "weak"} trend bias.
+        </p>
+        <p>
+            The last crossover was <b>{cross_text[cross_type]}</b>{" on " + cross_date if cross_date else ""}, which occurred <b>{days_since} days</b> ago.
+            The asset is currently trading <b>{current_pos}</b> its long-term SMA.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 # Footer disclaimer
 st.caption("This app is for informational and educational purposes only and does not constitute financial advice.")

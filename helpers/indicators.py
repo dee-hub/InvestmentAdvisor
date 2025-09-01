@@ -757,6 +757,7 @@ def compute_momentum_12_1_with_fig(con, symbol: str, start_date: str = "2010-01-
         "start_month": start_m,
         "end_month": end_m,
         "momentum_12_1_pct": round(latest_val * 100, 2),
+        "mom_12_1": mom_series,
         "fig": fig,
     }
 
@@ -822,12 +823,26 @@ def compute_sma_trend_and_cross_with_fig(
     fig.add_trace(go.Scatter(x=s.index, y=s.values, mode="lines", name="Close", line=dict(width=1.6)))
     fig.add_trace(go.Scatter(x=sma_s.index, y=sma_s.values, mode="lines", name=f"SMA{sma_short}", line=dict(width=1)))
     fig.add_trace(go.Scatter(x=sma_l.index, y=sma_l.values, mode="lines", name=f"SMA{sma_long}", line=dict(width=1)))
-
+    
     if last_cross_date is not None:
-        fig.add_vline(
-            x=last_cross_date, line_dash="dot",
-            annotation_text=f"Last {('Golden' if cross_type=='golden_cross' else 'Death')} Cross",
-            annotation_position="top right"
+        cross_dt = pd.to_datetime(last_cross_date).to_pydatetime()  # native datetime
+
+        # vertical line as a shape (xref='x', yref='paper' spans full plot)
+        fig.add_shape(
+            type="line",
+            xref="x", yref="paper",
+            x0=cross_dt, x1=cross_dt, y0=0, y1=1,
+            line=dict(dash="dot", width=1)
+        )
+
+        # separate annotation at the top of the plot
+        fig.add_annotation(
+            x=cross_dt, y=1,
+            xref="x", yref="paper",
+            yanchor="bottom",
+            text=f"Last {'Golden' if cross_type=='golden_cross' else 'Death'} Cross",
+            showarrow=False,
+            align="right"
         )
 
     fig.update_layout(
