@@ -241,7 +241,7 @@ with st.expander("Performance", expanded=False):
         <h5 style="margin-top: 0;"><b>Rolling Returns (CAGR)</b></h5>
         <p style="margin-bottom: 1rem;">
             Rolling returns show how the asset performed over overlapping <b>3-year periods</b>.
-            This helps you see how consistently the asset delivered returns — not just the average over time.
+            This helps you see how consistently the asset delivered returns not just the average over time.
         </p>
             </div>
     """, unsafe_allow_html=True)
@@ -296,7 +296,7 @@ with st.expander("Risk Metrics", expanded=False):
                 <li> <b>Sharpe</b>: return vs. total volatility. </li>
                 <li> <b>Sortino</b>: return vs. downside-only volatility (focuses on losses). </li>
                 <li> <b>Calmar</b>: return vs. worst-case loss (drawdown). </li>
-                Higher is better — values above <b>1.0</b> generally signal good risk-adjusted performance.
+                Higher is better, values above <b>1.0</b> generally signal good risk-adjusted performance.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -317,7 +317,7 @@ with st.expander("Risk Metrics", expanded=False):
     <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
         <h5 style="margin-top: 0;"><b>📊 Monthly Return Distribution</b></h5>
         <p style="margin-bottom: 1rem;">
-            This chart shows how monthly returns have been distributed over time — are they mostly positive? How extreme are the losses?  
+            This chart shows how monthly returns have been distributed over time, are they mostly positive? How extreme are the losses?  
             Look for <b>skew</b> (bias toward gains or losses) and <b>kurtosis</b> (how often extreme outcomes happen).
         </p>
     </div>
@@ -349,8 +349,8 @@ with st.expander("Trend & Momentum", expanded=False):
     <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
         <h5 style="margin-top: 0;"><b>SMA Trend & Crossover Analysis</b></h5>
         <p>
-            This analysis compares the asset’s price against two key simple moving averages (SMAs): a short-term (e.g. 50-day) and a long-term (e.g. 200-day). 
-            When the short SMA crosses above the long SMA, it’s called a <b>Golden Cross</b>—often seen as a bullish signal. 
+            This analysis compares the asset's price against two key simple moving averages (SMAs): a short-term (e.g. 50-day) and a long-term (e.g. 200-day). 
+            When the short SMA crosses above the long SMA, it's called a <b>Golden Cross</b>—often seen as a bullish signal. 
             A <b>Death Cross</b> (short crosses below long) is typically bearish. 
             We also measure how often the price stays above the long-term SMA to assess long-term trend strength.
         </p>
