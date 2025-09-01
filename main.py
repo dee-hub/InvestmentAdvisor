@@ -236,22 +236,30 @@ with m4:
 
 # === PERFORMANCE SECTION ===
 with st.expander("Performance", expanded=False):
-    st.subheader("📊 Rolling Returns (CAGR)")
     st.markdown("""
-    Rolling returns show how the asset performed over overlapping **3-year periods**.
-    This helps you see how consistently the asset delivered returns — not just the average over time.
-    """)
+    <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
+        <h5 style="margin-top: 0;"><b>Rolling Returns (CAGR)</b></h5>
+        <p style="margin-bottom: 1rem;">
+            Rolling returns show how the asset performed over overlapping <b>3-year periods</b>.
+            This helps you see how consistently the asset delivered returns — not just the average over time.
+        </p>
+            </div>
+    """, unsafe_allow_html=True)
     rolling_fig, rolling_note, _ = plot_rolling_returns(conn, default_symbol, window_years=3)
     st.plotly_chart(rolling_fig, use_container_width=True)
     st.write(rolling_note)
 
     st.markdown("---")
 
-    st.subheader("📈 Total Return vs Benchmark")
     st.markdown("""
-    This compares the growth of a **$10,000 investment** in this asset versus a common benchmark like the S&P 500 (SPY). 
-    It helps you understand whether the asset outperformed or lagged the broader market.
-    """)
+    <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
+        <h5 style="margin-top: 0;"><b>Total Return vs Benchmark</b></h5>
+        <p style="margin-bottom: 1rem;">
+            This compares the growth of a <b>$10,000 investment</b> in this asset versus a common benchmark like the S&P 500 (SPY). 
+            It helps you understand whether the asset outperformed or lagged the broader market.
+        </p>
+            </div>
+    """, unsafe_allow_html=True)
     comp_fig, comp_note = plot_total_return_vs_benchmark(conn, default_symbol, benchmark="SPY")
     st.plotly_chart(comp_fig, use_container_width=True)
     st.markdown(comp_note)
@@ -265,10 +273,9 @@ with st.expander("Performance", expanded=False):
 )
 
 with st.expander("Risk Metrics", expanded=False):
-    st.subheader("📉 Max Drawdown & Duration")
     st.markdown("""
     <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
-        <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+        <h5 style="margin-top: 0;"><b>📉 Max Drawdown & Duration</b></h5>
         <p style="margin-bottom: 1rem;">
             This shows the <b>largest drop</b> from a previous high (drawdown) and how long it took to recover.
             It tells you how painful a worst-case investment period could have been, which is crucial for risk tolerance.
@@ -281,10 +288,9 @@ with st.expander("Risk Metrics", expanded=False):
 
     st.markdown("---")
 
-    st.subheader("📏 Risk Ratios: Sharpe, Sortino, Calmar")
     st.markdown("""
         <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9; margin-bottom: 15px;">
-            <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+            <h5 style="margin-top: 0;"><b>📏 Risk Ratios: Sharpe, Sortino, Calmar</b></h5>
             <p style="margin-bottom: 1rem;">
                 These ratios tell you how efficiently the asset has delivered returns relative to its risk:
                 <li> <b>Sharpe</b>: return vs. total volatility. </li>
@@ -307,10 +313,9 @@ with st.expander("Risk Metrics", expanded=False):
 
     st.markdown("---")
 
-    st.subheader("📊 Monthly Return Distribution")
     st.markdown("""
     <div style="border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background-color: #f9f9f9;">
-        <h5 style="margin-top: 0;"><b>12-1 Momentum</b></h5>
+        <h5 style="margin-top: 0;"><b>📊 Monthly Return Distribution</b></h5>
         <p style="margin-bottom: 1rem;">
             This chart shows how monthly returns have been distributed over time — are they mostly positive? How extreme are the losses?  
             Look for <b>skew</b> (bias toward gains or losses) and <b>kurtosis</b> (how often extreme outcomes happen).
