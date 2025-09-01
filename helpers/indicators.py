@@ -272,19 +272,19 @@ def get_best_worst_month_and_hit_rate(con: any, symbol: str) -> Dict:
 #----------------------------Risk-----------------------------------#
 #-------------------------------------------------------------------------------------#
 
-def calculate_annualized_volatility(con: any, symbol: str) -> float:
+def calculate_annual_volatility_by_year(con: any, symbol: str) -> List[Dict]:
     """
-    Calculates annualized volatility using standard deviation of monthly returns.
+    Calculates annualized volatility (monthly return std × sqrt(12)) for each year
+    and returns a list of dictionaries with start date, end date, and volatility.
 
     Parameters:
-        db_path (str): Path to DuckDB database.
+        con (duckdb.DuckDBPyConnection): Active DuckDB connection.
         symbol (str): Asset symbol (e.g., "AAPL").
 
     Returns:
-        float: Annualized volatility as a percentage.
+        List[Dict]: List of annual volatility stats.
     """
-    # Connect and get close prices
-    
+    # Fetch data
     df = con.execute(f"""
         SELECT ts, close
         FROM ohlcv
@@ -292,16 +292,31 @@ def calculate_annualized_volatility(con: any, symbol: str) -> float:
         ORDER BY ts
     """).fetchdf()
 
+    if df.empty:
+        return []
+
     df['ts'] = pd.to_datetime(df['ts'])
     df.set_index('ts', inplace=True)
 
-    # Resample to monthly close
+    # Resample to monthly closes
     monthly = df['close'].resample('M').last()
-    returns = monthly.pct_change().dropna()
+    monthly_returns = monthly.pct_change().dropna()
 
-    # Annualized volatility
-    vol = returns.std() * np.sqrt(12)
-    return round(vol * 100, 2)  # As percentage
+    # Group by year
+    results = []
+    for year, group in monthly_returns.groupby(monthly_returns.index.year):
+        if len(group) >= 3:  # Skip years with too little data
+            start = group.index.min().strftime("%Y-%m-%d")
+            end = group.index.max().strftime("%Y-%m-%d")
+            vol = group.std(ddof=0) * np.sqrt(12)
+            results.append({
+                "year": year,
+                "start": start,
+                "end": end,
+                "annualized_volatility_pct": round(vol * 100, 2)
+            })
+
+    return results
 
 def calculate_downside_deviation(con: any, symbol: str, target_return: float = 0.0) -> float:
     """
