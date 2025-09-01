@@ -1,2 +1,7 @@
-*.ingest_marketdata.py
+# notebooks
 *.ipynb
+
+# your ingest script(s)
+ingest_marketdata.py
+**/ingest_marketdata.py
+*ingest_marketdata.py
